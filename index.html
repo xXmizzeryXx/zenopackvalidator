@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZenoPack Validator</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #04040a;
+  --bg2: #08080f;
+  --bg3: #0d0d1a;
+  --cyan: #00f5ff;
+  --pink: #ff006e;
+  --purple: #bf00ff;
+  --green: #00ff88;
+  --yellow: #ffe600;
+  --text: #dde8ff;
+  --muted: #4a5272;
+  --border: rgba(0,245,255,0.12);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,245,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,245,255,0.04) 0%, transparent 70%);
+  top: -200px; left: 50%; transform: translateX(-50%);
+  pointer-events: none; z-index: 0;
+}
+
+.scanlines {
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none; z-index: 1;
+}
+
+nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 60px;
+  background: rgba(4,4,10,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Orbitron', monospace; font-weight: 900;
+  font-size: 16px; letter-spacing: 4px;
+  color: var(--cyan); text-shadow: 0 0 20px rgba(0,245,255,0.5);
+  text-decoration: none;
+}
+.nav-logo span { color: var(--text); font-weight: 400; opacity: .5; font-size: 11px; letter-spacing: 3px; }
+.nav-links { display: flex; gap: 24px; align-items: center; }
+.nav-link {
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px;
+  color: var(--muted); text-decoration: none; transition: color .2s;
+}
+.nav-link:hover { color: var(--cyan); }
+.nav-badge {
+  font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 3px;
+  border: 1px solid rgba(0,245,255,0.25);
+  background: rgba(0,245,255,0.06); color: var(--cyan);
+}
+
+.hero {
+  position: relative; z-index: 2;
+  text-align: center; padding: 80px 24px 48px;
+}
+.hero-eyebrow {
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 5px;
+  color: var(--cyan); opacity: .7; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.hero-eyebrow::before, .hero-eyebrow::after {
+  content: ''; width: 40px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan));
+}
+.hero-eyebrow::after { transform: scaleX(-1); }
+.hero-title {
+  font-family: 'Orbitron', monospace; font-weight: 900;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: 6px; line-height: 1.1; margin-bottom: 16px;
+  color: var(--text);
+}
+.hero-title span { color: var(--cyan); text-shadow: 0 0 40px rgba(0,245,255,0.5); }
+.hero-sub {
+  font-size: 15px; color: var(--muted); max-width: 480px;
+  margin: 0 auto; line-height: 1.7;
+}
+
+.main-wrap {
+  position: relative; z-index: 2;
+  max-width: 860px; margin: 0 auto;
+  padding: 0 24px 80px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.drop-zone {
+  border: 2px dashed rgba(0,245,255,.2);
+  border-radius: 14px; padding: 52px 24px;
+  text-align: center; cursor: pointer;
+  transition: all .25s; background: rgba(0,245,255,.01);
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: rgba(0,245,255,.5);
+  background: rgba(0,245,255,.04);
+  box-shadow: 0 0 30px rgba(0,245,255,.05);
+}
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon { font-size: 3rem; color: rgba(0,245,255,.25); margin-bottom: 16px; transition: color .2s; }
+.drop-zone:hover .drop-icon { color: rgba(0,245,255,.5); }
+.drop-title {
+  font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 3px;
+  color: var(--text); margin-bottom: 8px;
+}
+.drop-sub { font-size: 13px; color: var(--muted); }
+
+.result-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px 32px;
+  display: none; animation: fadeUp .4s ease both;
+}
+.result-card.visible { display: block; }
+
+.result-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+}
+.result-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.result-icon.pass { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.25); }
+.result-icon.fail { background: rgba(255,0,110,0.1); color: var(--pink); border: 1px solid rgba(255,0,110,0.25); }
+.result-icon.warn { background: rgba(255,230,0,0.1); color: var(--yellow); border: 1px solid rgba(255,230,0,0.25); }
+.result-title { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 3px; }
+.result-title.pass { color: var(--green); }
+.result-title.fail { color: var(--pink); }
+.result-title.warn { color: var(--yellow); }
+.result-filename { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: .5px; }
+
+.checks-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.check-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px; border-radius: 8px;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
+}
+.check-item.pass { border-color: rgba(0,255,136,0.12); background: rgba(0,255,136,0.03); }
+.check-item.fail { border-color: rgba(255,0,110,0.15); background: rgba(255,0,110,0.04); }
+.check-item.warn { border-color: rgba(255,230,0,0.15); background: rgba(255,230,0,0.03); }
+.check-item.info { border-color: rgba(0,245,255,0.1); background: rgba(0,245,255,0.02); }
+.check-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; flex-shrink: 0; margin-top: 1px;
+}
+.check-dot.pass { background: rgba(0,255,136,0.15); color: var(--green); }
+.check-dot.fail { background: rgba(255,0,110,0.15); color: var(--pink); }
+.check-dot.warn { background: rgba(255,230,0,0.15); color: var(--yellow); }
+.check-dot.info { background: rgba(0,245,255,0.1); color: var(--cyan); }
+.check-text { flex: 1; }
+.check-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.check-detail { font-size: 11px; color: var(--muted); letter-spacing: .3px; }
+
+.meta-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px; margin-bottom: 24px;
+}
+.meta-item {
+  background: rgba(0,245,255,0.03); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+}
+.meta-label { font-family: 'Orbitron', monospace; font-size: 7px; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; }
+.meta-value { font-size: 14px; font-weight: 600; color: var(--text); word-break: break-all; }
+
+.file-table-wrap {
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px;
+}
+.file-table-header {
+  display: grid; grid-template-columns: 1fr 120px 80px;
+  padding: 8px 14px; background: rgba(0,245,255,0.04);
+  border-bottom: 1px solid var(--border);
+  font-family: 'Orbitron', monospace; font-size: 7px; letter-spacing: 2px; color: var(--muted);
+}
+.file-table-body { max-height: 200px; overflow-y: auto; }
+.file-table-body::-webkit-scrollbar { width: 3px; }
+.file-table-body::-webkit-scrollbar-thumb { background: rgba(0,245,255,.15); border-radius: 3px; }
+.file-row {
+  display: grid; grid-template-columns: 1fr 120px 80px;
+  padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+  align-items: center;
+}
+.file-row:last-child { border-bottom: none; }
+.file-row.index-file { color: var(--green); }
+.file-row-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
+
+.score-bar-wrap { margin-bottom: 20px; }
+.score-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px;
+  color: var(--muted); margin-bottom: 8px;
+}
+.score-num { font-size: 14px; font-weight: 700; }
+.score-num.perfect { color: var(--green); }
+.score-num.good { color: var(--cyan); }
+.score-num.bad { color: var(--pink); }
+.score-track {
+  height: 6px; background: rgba(255,255,255,0.06);
+  border-radius: 6px; overflow: hidden;
+}
+.score-fill {
+  height: 100%; border-radius: 6px; transition: width .6s ease;
+}
+.score-fill.perfect { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+.score-fill.good { background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+.score-fill.bad { background: linear-gradient(90deg, var(--pink), var(--purple)); }
+
+.btn-revalidate {
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px;
+  padding: 10px 20px; border-radius: 7px; cursor: pointer;
+  border: 1px solid rgba(0,245,255,.25); background: transparent; color: var(--muted);
+  transition: all .2s;
+}
+.btn-revalidate:hover { color: var(--cyan); border-color: rgba(0,245,255,.5); }
+
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(8,8,15,.97); border: 1px solid rgba(0,245,255,.2);
+  border-radius: 8px; padding: 12px 24px;
+  font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px;
+  color: var(--cyan); z-index: 9999;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.err { border-color: rgba(255,0,110,.3); color: var(--pink); }
+.toast.ok  { border-color: rgba(0,255,136,.3); color: var(--green); }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="toast" id="toast"></div>
+
+<nav>
+  <a href="#" class="nav-logo">ZENO<span>PACK</span></a>
+  <div class="nav-links">
+    <a href="https://github.com/xXmizzeryXx/zenopack" target="_blank" class="nav-link"><i class="fa-brands fa-github"></i> GITHUB</a>
+    <span class="nav-badge">VALIDATOR</span>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">ECLIPSE SUITE // OPEN FORMAT</div>
+  <h1 class="hero-title"><span>ZENO</span>PACK VALIDATOR</h1>
+  <p class="hero-sub">Drop any .zenopack file to validate it against the ZenoPack v1.0 specification and get a full report.</p>
+</section>
+
+<div class="main-wrap">
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".zenopack">
+    <div class="drop-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="drop-title">DROP A .ZENOPACK TO VALIDATE</div>
+    <div class="drop-sub">or click to browse</div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="result-icon" id="resultIcon"></div>
+      <div>
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-filename" id="resultFilename"></div>
+      </div>
+    </div>
+
+    <div class="score-bar-wrap">
+      <div class="score-label">
+        <span>VALIDATION SCORE</span>
+        <span class="score-num" id="scoreNum"></span>
+      </div>
+      <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="checks-list" id="checksList"></div>
+
+    <div class="meta-grid" id="metaGrid"></div>
+
+    <div class="file-table-wrap" id="fileTableWrap" style="display:none">
+      <div class="file-table-header">
+        <span>PATH</span><span>MIME TYPE</span><span>SIZE</span>
+      </div>
+      <div class="file-table-body" id="fileTableBody"></div>
+    </div>
+
+    <button class="btn-revalidate" onclick="reset()"><i class="fa-solid fa-rotate-left"></i>&nbsp; VALIDATE ANOTHER</button>
+  </div>
+
+</div>
+
+<script>
+const KNOWN_CATEGORIES = ['arcade','puzzle','platformer','shooter','rpg','strategy','sports','racing','horror','other'];
+const RECOMMENDED_FIELDS = ['icon','category','description','exportedAt'];
+
+function fmt(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (type?' '+type:'');
+  void t.offsetWidth; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function reset() {
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('fileInput').value = '';
+  document.getElementById('dropZone').style.display = 'block';
+}
+
+async function validate(file) {
+  document.getElementById('dropZone').style.display = 'none';
+
+  const checks = [];
+  let pack = null;
+  let rawSize = file.size;
+  let passed = 0;
+  let total = 0;
+
+  function check(label, status, detail) {
+    checks.push({ label, status, detail });
+    total++;
+    if (status === 'pass') passed++;
+    else if (status === 'warn') passed += 0.5;
+  }
+
+  check('File extension', file.name.endsWith('.zenopack') ? 'pass' : 'warn',
+    file.name.endsWith('.zenopack') ? 'File ends with .zenopack' : 'File should end with .zenopack');
+
+  let raw;
+  try {
+    raw = await file.text();
+  } catch(e) {
+    check('File readable', 'fail', 'Could not read file contents');
+    renderResult(file.name, checks, null, passed, total, rawSize);
+    return;
+  }
+
+  check('File readable', 'pass', `${fmt(rawSize)} — readable as UTF-8 text`);
+
+  try {
+    pack = JSON.parse(raw);
+  } catch(e) {
+    check('Valid JSON', 'fail', 'File is not valid JSON: ' + e.message);
+    renderResult(file.name, checks, null, passed, total, rawSize);
+    return;
+  }
+
+  check('Valid JSON', 'pass', 'File parses as valid JSON');
+
+  check('zenopack field', pack?.zenopack ? 'pass' : 'fail',
+    pack?.zenopack ? `Version: ${pack.zenopack}` : 'Missing required field: zenopack');
+
+  if (pack?.zenopack) {
+    const major = parseInt(pack.zenopack.split('.')[0]);
+    check('Version compatibility', major <= 1 ? 'pass' : 'warn',
+      major <= 1 ? `v${pack.zenopack} — supported` : `v${pack.zenopack} — newer than spec v1.0, may have unknown fields`);
+  }
+
+  check('name field', pack?.name && typeof pack.name === 'string' && pack.name.trim() ? 'pass' : 'fail',
+    pack?.name ? `"${pack.name}"` : 'Missing required field: name');
+
+  if (pack?.name && pack.name.length > 128) {
+    check('name length', 'warn', `Name is ${pack.name.length} chars — recommended max is 128`);
+  }
+
+  check('files array', Array.isArray(pack?.files) && pack.files.length > 0 ? 'pass' : 'fail',
+    Array.isArray(pack?.files) ? (pack.files.length > 0 ? `${pack.files.length} file(s) present` : 'files array is empty') : 'Missing required field: files');
+
+  if (Array.isArray(pack?.files) && pack.files.length > 0) {
+    const hasIndex = pack.files.some(f => f.path?.toLowerCase() === 'index.html');
+    check('index.html present', hasIndex ? 'pass' : 'fail',
+      hasIndex ? 'index.html found at root level' : 'No file with path "index.html" — this is required');
+
+    let allValid = true;
+    let missingFields = [];
+    pack.files.forEach((f, i) => {
+      if (!f.path) { allValid = false; missingFields.push(`files[${i}]: missing path`); }
+      if (!f.mimeType) { allValid = false; missingFields.push(`files[${i}]: missing mimeType`); }
+      if (!Array.isArray(f.data)) { allValid = false; missingFields.push(`files[${i}]: data must be array`); }
+    });
+    check('File objects valid', allValid ? 'pass' : 'fail',
+      allValid ? 'All file objects have path, mimeType, and data' : missingFields.slice(0,3).join(', '));
+
+    const totalDataSize = pack.files.reduce((s, f) => s + (Array.isArray(f.data) ? f.data.length : 0), 0);
+    check('File data integrity', totalDataSize > 0 ? 'pass' : 'fail',
+      totalDataSize > 0 ? `${fmt(totalDataSize)} of file data` : 'File data appears empty');
+  }
+
+  RECOMMENDED_FIELDS.forEach(field => {
+    check(`${field} field (recommended)`, pack?.[field] ? 'pass' : 'warn',
+      pack?.[field] ? `Present` : `Optional but recommended field "${field}" is missing`);
+  });
+
+  if (pack?.category) {
+    check('category value', KNOWN_CATEGORIES.includes(pack.category) ? 'pass' : 'warn',
+      KNOWN_CATEGORIES.includes(pack.category)
+        ? `"${pack.category}" — valid category`
+        : `"${pack.category}" — not a standard category value`);
+  }
+
+  if (pack?.description && pack.description.length > 512) {
+    check('description length', 'warn', `Description is ${pack.description.length} chars — recommended max is 512`);
+  }
+
+  renderResult(file.name, checks, pack, passed, total, rawSize);
+}
+
+function renderResult(filename, checks, pack, passed, total, rawSize) {
+  const score = Math.round((passed / total) * 100);
+  const hasFails = checks.some(c => c.status === 'fail');
+  const hasWarns = checks.some(c => c.status === 'warn');
+
+  const overall = hasFails ? 'fail' : hasWarns ? 'warn' : 'pass';
+  const icons = { pass: 'fa-circle-check', fail: 'fa-circle-xmark', warn: 'fa-triangle-exclamation' };
+  const labels = { pass: 'VALID', fail: 'INVALID', warn: 'VALID WITH WARNINGS' };
+
+  document.getElementById('resultIcon').className = `result-icon ${overall}`;
+  document.getElementById('resultIcon').innerHTML = `<i class="fa-solid ${icons[overall]}"></i>`;
+  document.getElementById('resultTitle').className = `result-title ${overall}`;
+  document.getElementById('resultTitle').textContent = labels[overall];
+  document.getElementById('resultFilename').textContent = filename;
+
+  const scoreClass = score >= 90 ? 'perfect' : score >= 60 ? 'good' : 'bad';
+  document.getElementById('scoreNum').className = `score-num ${scoreClass}`;
+  document.getElementById('scoreNum').textContent = score + '%';
+  document.getElementById('scoreFill').className = `score-fill ${scoreClass}`;
+  setTimeout(() => { document.getElementById('scoreFill').style.width = score + '%'; }, 50);
+
+  const list = document.getElementById('checksList');
+  list.innerHTML = checks.map(c => `
+    <div class="check-item ${c.status}">
+      <div class="check-dot ${c.status}">
+        <i class="fa-solid fa-${c.status==='pass'?'check':c.status==='fail'?'xmark':'exclamation'}"></i>
+      </div>
+      <div class="check-text">
+        <div class="check-label">${c.label}</div>
+        <div class="check-detail">${c.detail}</div>
+      </div>
+    </div>`).join('');
+
+  const meta = document.getElementById('metaGrid');
+  const metaItems = [
+    { label: 'FILE SIZE', value: fmt(rawSize) },
+    { label: 'GAME NAME', value: pack?.name || 'N/A' },
+    { label: 'VERSION', value: pack?.zenopack || 'N/A' },
+    { label: 'FILE COUNT', value: pack?.files?.length ?? 'N/A' },
+    { label: 'CATEGORY', value: pack?.category || 'None' },
+    { label: 'EXPORTED', value: pack?.exportedAt ? new Date(pack.exportedAt).toLocaleDateString() : 'N/A' },
+  ];
+  meta.innerHTML = metaItems.map(m => `
+    <div class="meta-item">
+      <div class="meta-label">${m.label}</div>
+      <div class="meta-value">${m.value}</div>
+    </div>`).join('');
+
+  if (pack?.files?.length) {
+    const tableWrap = document.getElementById('fileTableWrap');
+    const tbody = document.getElementById('fileTableBody');
+    tableWrap.style.display = 'block';
+    tbody.innerHTML = pack.files.map(f => `
+      <div class="file-row ${f.path?.toLowerCase()==='index.html'?'index-file':''}">
+        <div class="file-row-path">${f.path || '?'}</div>
+        <div>${f.mimeType || '?'}</div>
+        <div>${Array.isArray(f.data) ? fmt(f.data.length) : '?'}</div>
+      </div>`).join('');
+  }
+
+  document.getElementById('resultCard').classList.add('visible');
+  showToast(overall === 'pass' ? 'VALIDATION PASSED' : overall === 'warn' ? 'VALID WITH WARNINGS' : 'VALIDATION FAILED',
+    overall === 'pass' ? 'ok' : overall === 'warn' ? '' : 'err');
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) validate(fileInput.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) validate(f);
+});
+</script>
+</body>
+</html>
